@@ -1,0 +1,36 @@
+<mujoco model="g1_reach_grasp_scene">
+  <include file="../third_party/mujoco_menagerie/unitree_g1/g1_with_hands.xml"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0.9 0.9 0.9"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="140" elevation="-20"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    <material name="table_top" rgba="0.55 0.41 0.29 1"/>
+    <material name="table_leg" rgba="0.22 0.22 0.24 1"/>
+    <material name="target_block" rgba="0.83 0.29 0.21 1"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+
+    <body name="grasp_table" pos="0.30 -0.47 0.38">
+      <geom name="grasp_table_top" type="box" size="0.22 0.18 0.02" material="table_top"/>
+      <geom type="box" pos="0.16 0.12 -0.34" size="0.02 0.02 0.34" material="table_leg"/>
+      <geom type="box" pos="0.16 -0.12 -0.34" size="0.02 0.02 0.34" material="table_leg"/>
+      <geom type="box" pos="-0.16 0.12 -0.34" size="0.02 0.02 0.34" material="table_leg"/>
+      <geom type="box" pos="-0.16 -0.12 -0.34" size="0.02 0.02 0.34" material="table_leg"/>
+    </body>
+
+    <body name="grasp_block" pos="0.28 -0.48 0.80">
+      <geom name="grasp_block_geom" type="box" size="0.025 0.025 0.04" material="target_block"/>
+      <site name="grasp_target" pos="0 0 0.04" size="0.012" rgba="0 1 0 1"/>
+    </body>
+  </worldbody>
+</mujoco>
