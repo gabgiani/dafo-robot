@@ -10,13 +10,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=47001)
     parser.add_argument("--advance", type=float, help="Objetivo de avance en [-1, 1].")
+    parser.add_argument("--lateral", type=float, help="Objetivo lateral en [-1, 1].")
     parser.add_argument("--turn", type=float, help="Objetivo de giro en [-1, 1].")
+    parser.add_argument("--march", type=float, help="Marcha en el sitio en [0, 1] (levanta piernas sin avanzar).")
     parser.add_argument("--amplitude", type=float, help="Amplitud absoluta en [0.2, 1.2].")
     parser.add_argument("--frequency", type=float, help="Frecuencia absoluta en [0.8, 2.2].")
     parser.add_argument("--center", action="store_true", help="Centra avance y giro.")
     parser.add_argument("--reset", action="store_true", help="Reinicia el robot al keyframe inicial.")
     parser.add_argument("--pause", action="store_true", help="Pausa la simulacion.")
     parser.add_argument("--resume", action="store_true", help="Reanuda la simulacion.")
+    parser.add_argument(
+        "--report-sensors",
+        action="store_true",
+        help="Pide al viewer que imprima el snapshot actual de sensores.",
+    )
     return parser.parse_args()
 
 
@@ -24,8 +31,12 @@ def build_payload(args: argparse.Namespace) -> dict[str, object]:
     payload: dict[str, object] = {}
     if args.advance is not None:
         payload["advance"] = args.advance
+    if args.lateral is not None:
+        payload["lateral"] = args.lateral
     if args.turn is not None:
         payload["turn"] = args.turn
+    if args.march is not None:
+        payload["march"] = args.march
     if args.amplitude is not None:
         payload["amplitude"] = args.amplitude
     if args.frequency is not None:
@@ -38,6 +49,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, object]:
         payload["paused"] = True
     if args.resume:
         payload["paused"] = False
+    if args.report_sensors:
+        payload["report_sensors"] = True
     return payload
 
 

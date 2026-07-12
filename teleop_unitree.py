@@ -13,7 +13,7 @@ from external_control import send_udp_command
 _HELP_TEXT = """Teleop Unitree
   W/S o flecha arriba/abajo: avance +/-
   A/D o flecha izquierda/derecha: giro +/-
-  Espacio: centrar avance y giro
+  Espacio: centrar avance y giro  G: marcha en el sitio (levantar piernas sin avanzar)    I: imprimir snapshot de sensores
   R: resetear robot
   P: pausar simulacion
   O: reanudar simulacion
@@ -27,6 +27,7 @@ _HELP_TEXT = """Teleop Unitree
 class TeleopState:
     advance: float = 0.0
     turn: float = 0.0
+    march: float = 0.0
     amplitude: float = 1.0
     frequency: float = 1.0
     paused: bool = False
@@ -114,6 +115,11 @@ def handle_key(
         state.advance = 0.0
         state.turn = 0.0
         return {"center": True}
+    elif lower == "g":
+        state.march = 0.0 if state.march > 0.5 else 1.0
+        return {"march": state.march}
+    elif lower == "i":
+        return {"report_sensors": True}
     elif lower == "r":
         state.advance = 0.0
         state.turn = 0.0
