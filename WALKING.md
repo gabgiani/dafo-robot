@@ -4,7 +4,7 @@ Esta guía resume el estado actual del controlador de caminata y cómo conviene 
 
 ## Qué controla hoy la marcha
 
-El controlador está implementado en [interactive_unitree.py](/Users/gianig/dafo-human/interactive_unitree.py).
+El controlador está implementado en [interactive_unitree.py](interactive_unitree.py).
 
 Variables principales de la marcha:
 
@@ -43,14 +43,14 @@ Estado observado en viewer:
 Primero abrir el viewer:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer
 ```
 
 Luego abrir el teleop:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python teleop_unitree.py --host 127.0.0.1 --port 47001
 ```
 
@@ -85,7 +85,7 @@ En la práctica:
 Si cambias el controlador, la validación mínima recomendada es:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python simulate_unitree.py --robot g1-hands --mode headless --steps 300
 ```
 

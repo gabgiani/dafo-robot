@@ -4,9 +4,9 @@ Base mínima para instalar, ejecutar y entender cómo se usa este simulador de M
 
 ## Mapa de documentación
 
-- [INSTALL.md](/Users/gianig/dafo-human/INSTALL.md): instalación local y validación base.
-- [RUNBOOK.md](/Users/gianig/dafo-human/RUNBOOK.md): operación diaria del simulador, viewer, teleop y demo.
-- [WALKING.md](/Users/gianig/dafo-human/WALKING.md): estado actual del controlador de caminata y cómo probarlo.
+- [INSTALL.md](INSTALL.md): instalación local y validación base.
+- [RUNBOOK.md](RUNBOOK.md): operación diaria del simulador, viewer, teleop y demo.
+- [WALKING.md](WALKING.md): estado actual del controlador de caminata y cómo probarlo.
 
 ## Qué hay en este repositorio
 
@@ -27,12 +27,12 @@ Este proyecto está orientado a ejecución local. Hoy no incluye un pipeline de 
 
 ## Instalación
 
-La guía detallada está en [INSTALL.md](/Users/gianig/dafo-human/INSTALL.md).
+La guía detallada está en [INSTALL.md](INSTALL.md).
 
 Crear el entorno e instalar dependencias:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
@@ -48,14 +48,14 @@ Si falta la menagerie de MuJoCo, clónala dentro de `third_party` para que exist
 Prueba headless para validar que MuJoCo compila el modelo:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python simulate_unitree.py --robot g1-hands --mode headless --steps 300
 ```
 
 Abrir el simulador con viewer:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer
 ```
 
@@ -69,7 +69,7 @@ Modelos soportados por el launcher:
 
 En este repo, despliegue significa ejecución local del simulador. No existe una etapa separada de build/deploy a servidor.
 
-El punto de entrada es [simulate_unitree.py](/Users/gianig/dafo-human/simulate_unitree.py), que:
+El punto de entrada es [simulate_unitree.py](simulate_unitree.py), que:
 
 - Resuelve la escena del robot.
 - Compila el modelo MuJoCo.
@@ -79,19 +79,19 @@ El punto de entrada es [simulate_unitree.py](/Users/gianig/dafo-human/simulate_u
 
 ## Control del robot
 
-La operación completa está documentada en [RUNBOOK.md](/Users/gianig/dafo-human/RUNBOOK.md).
+La operación completa está documentada en [RUNBOOK.md](RUNBOOK.md).
 
 El viewer corre la física y escucha comandos externos por UDP. El teleop se ejecuta en otra terminal:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python teleop_unitree.py --host 127.0.0.1 --port 47001
 ```
 
 También existe el wrapper:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python teleop_unitree.pyw --host 127.0.0.1 --port 47001
 ```
 
@@ -108,19 +108,19 @@ Controles del teleop:
 
 ## Demo disponible
 
-Hay una demo de reach-and-grasp para G1 con manos en [reach_grasp_demo.py](/Users/gianig/dafo-human/reach_grasp_demo.py).
+Hay una demo de reach-and-grasp para G1 con manos en [reach_grasp_demo.py](reach_grasp_demo.py).
 
 Ejecutar sin video:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python reach_grasp_demo.py --no-video
 ```
 
 Exportar video:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python reach_grasp_demo.py
 ```
 
@@ -128,12 +128,12 @@ El video se escribe por defecto en `artifacts/g1_reach_grasp.mp4`.
 
 ## Archivos principales
 
-- [simulate_unitree.py](/Users/gianig/dafo-human/simulate_unitree.py): launcher principal.
-- [interactive_unitree.py](/Users/gianig/dafo-human/interactive_unitree.py): loop del viewer y controlador interactivo.
-- [external_control.py](/Users/gianig/dafo-human/external_control.py): transporte UDP.
-- [teleop_unitree.py](/Users/gianig/dafo-human/teleop_unitree.py): teclado en raw mode para mandar comandos.
-- [send_unitree_command.py](/Users/gianig/dafo-human/send_unitree_command.py): envío one-shot de comandos UDP.
-- [reach_grasp_demo.py](/Users/gianig/dafo-human/reach_grasp_demo.py): demo de alcance y agarre.
+- [simulate_unitree.py](simulate_unitree.py): launcher principal.
+- [interactive_unitree.py](interactive_unitree.py): loop del viewer y controlador interactivo.
+- [external_control.py](external_control.py): transporte UDP.
+- [teleop_unitree.py](teleop_unitree.py): teclado en raw mode para mandar comandos.
+- [send_unitree_command.py](send_unitree_command.py): envío one-shot de comandos UDP.
+- [reach_grasp_demo.py](reach_grasp_demo.py): demo de alcance y agarre.
 
 ## Problemas comunes
 
@@ -158,20 +158,20 @@ Si la escena no existe:
 Viewer con control UDP desactivado:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --control-port 0
 ```
 
 Viewer con cierre automático para validar arranque:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --max-seconds 10
 ```
 
 Prueba headless con otro robot:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python simulate_unitree.py --robot h1 --mode headless --steps 300
 ```

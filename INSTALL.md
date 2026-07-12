@@ -15,12 +15,12 @@ Esta guía cubre la instalación local del simulador y sus dependencias.
 Crear el entorno e instalar dependencias:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Dependencias instaladas desde [requirements.txt](/Users/gianig/dafo-human/requirements.txt):
+Dependencias instaladas desde [requirements.txt](requirements.txt):
 
 - `mujoco==3.2.7`
 - `glfw==2.10.0`
@@ -44,7 +44,7 @@ Si esa carpeta no existe, el simulador falla al resolver el modelo.
 Comprobar que MuJoCo carga el modelo sin abrir el viewer:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python simulate_unitree.py --robot g1-hands --mode headless --steps 300
 ```
 
@@ -55,7 +55,7 @@ Si eso funciona, la instalación base está lista.
 Para abrir el viewer usa `mjpython`, no `python`:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer
 ```
 
@@ -102,4 +102,4 @@ lsof -nP -iUDP:47001
 
 ## Siguiente paso
 
-Después de instalar, sigue [RUNBOOK.md](/Users/gianig/dafo-human/RUNBOOK.md) para operar el simulador y [WALKING.md](/Users/gianig/dafo-human/WALKING.md) para el estado actual de la caminata.
+Después de instalar, sigue [RUNBOOK.md](RUNBOOK.md) para operar el simulador y [WALKING.md](WALKING.md) para el estado actual de la caminata.

@@ -4,7 +4,7 @@ Esta guía explica cómo ejecutar el simulador y cómo operarlo en el flujo norm
 
 ## Punto de entrada
 
-El launcher principal es [simulate_unitree.py](/Users/gianig/dafo-human/simulate_unitree.py).
+El launcher principal es [simulate_unitree.py](simulate_unitree.py).
 
 Funciones principales:
 
@@ -18,14 +18,14 @@ Funciones principales:
 ### Headless
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python simulate_unitree.py --robot g1-hands --mode headless --steps 300
 ```
 
 ### Viewer con control UDP
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer
 ```
 
@@ -34,7 +34,7 @@ Por defecto escucha en `127.0.0.1:47001`.
 ### Viewer sin control UDP
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --control-port 0
 ```
 
@@ -47,7 +47,7 @@ cd /Users/gianig/dafo-human
 Ejemplo:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python simulate_unitree.py --robot h1 --mode headless --steps 300
 ```
 
@@ -58,14 +58,14 @@ Por defecto el launcher usa el keyframe `home`.
 Cambiar keyframe:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --keyframe home
 ```
 
 Desactivar keyframe:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python simulate_unitree.py --robot g1-hands --mode headless --keyframe ''
 ```
 
@@ -77,14 +77,14 @@ El flujo esperado es:
 2. En otra terminal, lanzar el teleop.
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python teleop_unitree.py --host 127.0.0.1 --port 47001
 ```
 
 Wrapper equivalente:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python teleop_unitree.pyw --host 127.0.0.1 --port 47001
 ```
 
@@ -102,45 +102,45 @@ Controles:
 
 ## Envío one-shot de comandos
 
-Para pruebas puntuales, usa [send_unitree_command.py](/Users/gianig/dafo-human/send_unitree_command.py).
+Para pruebas puntuales, usa [send_unitree_command.py](send_unitree_command.py).
 
 Ejemplos:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python send_unitree_command.py --host 127.0.0.1 --port 47001 --advance 0.8
 ```
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python send_unitree_command.py --host 127.0.0.1 --port 47001 --turn 0.4
 ```
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python send_unitree_command.py --host 127.0.0.1 --port 47001 --center
 ```
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python send_unitree_command.py --host 127.0.0.1 --port 47001 --reset
 ```
 
 ## Demo de grasp
 
-La demo disponible es [reach_grasp_demo.py](/Users/gianig/dafo-human/reach_grasp_demo.py).
+La demo disponible es [reach_grasp_demo.py](reach_grasp_demo.py).
 
 Sin video:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python reach_grasp_demo.py --no-video
 ```
 
 Con video:
 
 ```bash
-cd /Users/gianig/dafo-human
+cd /ruta/al/repo/dafo-human
 .venv/bin/python reach_grasp_demo.py
 ```
 
@@ -176,12 +176,12 @@ Revisar:
 
 ### El viewer se reinicia por caída
 
-Eso hoy forma parte de la lógica de recuperación del controlador en [interactive_unitree.py](/Users/gianig/dafo-human/interactive_unitree.py).
+Eso hoy forma parte de la lógica de recuperación del controlador en [interactive_unitree.py](interactive_unitree.py).
 
 ## Archivos operativos principales
 
-- [simulate_unitree.py](/Users/gianig/dafo-human/simulate_unitree.py)
-- [interactive_unitree.py](/Users/gianig/dafo-human/interactive_unitree.py)
-- [external_control.py](/Users/gianig/dafo-human/external_control.py)
-- [teleop_unitree.py](/Users/gianig/dafo-human/teleop_unitree.py)
-- [send_unitree_command.py](/Users/gianig/dafo-human/send_unitree_command.py)
+- [simulate_unitree.py](simulate_unitree.py)
+- [interactive_unitree.py](interactive_unitree.py)
+- [external_control.py](external_control.py)
+- [teleop_unitree.py](teleop_unitree.py)
+- [send_unitree_command.py](send_unitree_command.py)
