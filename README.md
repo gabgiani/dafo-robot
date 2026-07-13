@@ -11,6 +11,7 @@ Minimal base to install, run, and understand how this MuJoCo simulator for Unitr
 - [WALKING.md](WALKING.md): current state of the walking controller and how to test it.
 - [WORKSHOP.md](WORKSHOP.md): step-by-step walkthrough — manual control vs. Reinforcement Learning vs. objects in the scene.
 - [REINFORCEMENT_LEARNING.md](REINFORCEMENT_LEARNING.md): how the RL policy that keeps the robot standing works internally.
+- [FULL_BODY_INTEGRATION.md](FULL_BODY_INTEGRATION.md): what happened when combining the RL legs with the full arms/hands model, and how to actually fix it (retraining).
 
 ## What's in this repository
 

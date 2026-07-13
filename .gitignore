@@ -3,3 +3,7 @@ __pycache__/
 third_party/**/.git/
 
 MUJOCO_LOG.TXT
+
+# Downloaded model checkpoints (not source, large binaries)
+weights/
+yolov8s-world.pt

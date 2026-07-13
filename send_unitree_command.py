@@ -34,6 +34,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Pide al viewer que imprima el snapshot actual de sensores.",
     )
+    parser.add_argument(
+        "--capture",
+        action="store_true",
+        help="Captura lo que ve la camara de cabeza del robot y detecta objetos por geometria (LiDAR simulado).",
+    )
     return parser.parse_args()
 
 
@@ -65,6 +70,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, object]:
         payload["raw_mode"] = False
     if args.report_sensors:
         payload["report_sensors"] = True
+    if args.capture:
+        payload["capture"] = True
     return payload
 
 

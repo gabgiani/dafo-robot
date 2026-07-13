@@ -11,6 +11,7 @@ Base mínima para instalar, ejecutar y entender cómo se usa este simulador de M
 - [WALKING.es.md](WALKING.es.md): estado actual del controlador de caminata y cómo probarlo.
 - [WORKSHOP.es.md](WORKSHOP.es.md): recorrido paso a paso — control a mano vs. Reinforcement Learning vs. objetos en el escenario.
 - [REINFORCEMENT_LEARNING.es.md](REINFORCEMENT_LEARNING.es.md): cómo funciona por dentro la política de RL que mantiene al robot parado.
+- [FULL_BODY_INTEGRATION.es.md](FULL_BODY_INTEGRATION.es.md): qué pasó al combinar las piernas RL con el modelo completo de brazos/manos, y cómo arreglarlo de verdad (reentrenar).
 
 ## Qué hay en este repositorio
 
