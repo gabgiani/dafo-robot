@@ -24,6 +24,36 @@ físico medido**. También se verificó visualmente la marcha con postura de car
 modo de brazos naturales. La posición global mostrada por el visor proviene de
 `rt/odostate`, no de integrar la velocidad solicitada.
 
+## Capturas de referencia
+
+Las siguientes imágenes se agregan como referencia visual rápida para esta etapa.
+Ambas fueron capturadas en el desktop Linux remoto validado `192.168.0.60` después
+de levantar `run_sim_loop.py` sobre `DISPLAY=:0` y seleccionar el modo de brazos
+`cargar` sin aplicar locomoción.
+
+![Captura remota de MuJoCo del G1 en postura de carga](../artifacts/workshop/04_sonic_robot_carry_pose_remote.png)
+
+![Telecomando SONIC con el modo cargar seleccionado](../artifacts/workshop/04_sonic_teleop_remote.png)
+
+## Notas de captura y problemas encontrados
+
+- Durante la captura remota apareció una condición de carrera en
+  `gear_sonic/utils/mujoco_sim/unitree_sdk2py_bridge.py`: los subscribers DDS se
+  inicializaban antes de crear `low_cmd_lock`, `left_hand_cmd_lock` y
+  `right_hand_cmd_lock`. Si `LowCmdHandler` se dispara temprano, `run_sim_loop.py`
+  aborta con `AttributeError: 'UnitreeSdk2Bridge' object has no attribute 'low_cmd_lock'`.
+- La corrección práctica en el checkout de GR00T es crear esos tres locks antes de
+  cualquier llamada a `ChannelSubscriber.Init(...)`.
+- Cuando `run_sim_loop.py` se arranca por SSH hay que exportar `DISPLAY=:0`
+  explícitamente; si no, GLFW termina con `X11: The DISPLAY environment variable is missing`.
+- Antes de capturar, confirmar que el telecomando no esté publicando movimiento. Un
+  teleop viejo todavía activo puede dejar la simulación caminando o caída aunque el
+  visor ya esté abierto.
+- En el entorno remoto validado, CycloneDDS todavía puede emitir warnings de
+  inicialización de dominio `ChannelFactory` y el robot de MuJoCo puede terminar
+  cayéndose más adelante en la sesión. Las capturas estables de arriba se tomaron
+  inmediatamente después del arranque, antes de que reapareciera esa degradación.
+
 ## Qué incluye este repositorio
 
 | Archivo | Responsabilidad |

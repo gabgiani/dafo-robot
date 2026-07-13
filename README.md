@@ -2,189 +2,153 @@
 
 *[Versión en español](README.es.md)*
 
-This repository is where we start applying Physical AI: teaching a humanoid robot to carry out
-tasks that we have already taught human operators through the DAFO Guidance System, using that
-accumulated operational knowledge as a foundation for embodied AI.
+This repository documents the early research path for teaching a humanoid robot to do
+useful physical work. The medium-term milestone is simple and concrete: the robot must
+be able to take an object from one place and move it to another without falling,
+losing the object, or requiring a human to hand-script every joint motion.
 
-As a first step, this is a minimal base to install, run, and understand the MuJoCo simulator for
-Unitree robots that the rest of this work builds on.
+That pick-and-place milestone is not the final goal. It is the first measurable task
+that forces the stack to solve the real problems behind physical work: balance,
+locomotion, contact, upper-body coordination, perception of the scene, and action
+selection over time. Once that foundation is reliable, the same approach can be pushed
+toward other tasks, including manual handling flows and tasks derived from assembly
+manuals.
 
-## Documentation map
+## Research objective
+
+The project asks a practical question: how do we turn operational know-how that today
+exists in human operators and procedures into robot behavior that can be trained,
+tested, reproduced, and improved?
+
+Our working hypothesis is that the right path is not to start from a giant end-to-end
+promise, but to decompose the problem into progressive capabilities:
+
+1. keep the robot stable
+2. make it move intentionally
+3. make it survive contact with the world
+4. coordinate the whole body for useful actions
+5. connect those capabilities to simple task execution
+
+This repository is the research notebook and implementation base for that path.
+
+## What task are we pursuing?
+
+The concrete task target is intentionally modest at first:
+
+- detect or receive the location of an object
+- approach it without falling
+- reach it with the upper body
+- grasp or carry it
+- move it to a second location
+- repeat the process under controlled variations
+
+If the project cannot do that reliably in simulation, there is no technical basis for
+claiming it can handle richer work such as repetitive handling or assembly manuals.
+The simple task is therefore the test bench, not a toy example.
+
+## Why split the research into stages?
+
+Humanoid manipulation fails for many different reasons, and mixing all of them in one
+experiment hides the real cause of failure. A staged program makes the failure mode
+observable.
+
+- A standing problem is not yet a grasping problem.
+- A walking problem is not yet a perception problem.
+- An arm-coordination problem is not yet a task-planning problem.
+- A whole-body control problem should be measured before claiming task competence.
+
+That is why the repository is organized as workshops and focused documents instead of a
+single monolithic demo. Each stage isolates one capability, one comparison, or one
+integration problem and records what worked, what failed, and why.
+
+## Why not rely only on deterministic control?
+
+Deterministic methods are still part of the toolbox. We use them for baselines,
+instrumentation, safety envelopes, teleoperation, repeatable tests, and simple scripted
+behaviors. But they are not enough by themselves for the target we care about.
+
+For a humanoid robot, fully hand-designed control quickly becomes brittle because:
+
+- the state space is high-dimensional
+- balance corrections must happen continuously and fast
+- contact with the world is hard to model with fixed rules
+- upper and lower body decisions interact in ways that are expensive to hand-tune
+- the same scripted behavior breaks when friction, timing, or geometry changes
+
+In other words, a deterministic controller can demonstrate a narrow motion, but that is
+not the same as a robust capability. This repository therefore compares explicit,
+hand-written control against learned policies and then studies where whole-body learned
+control becomes necessary.
+
+## Technology stack
+
+The current research stack combines the following pieces:
+
+- **MuJoCo** as the main physics simulator for fast iteration and repeatable tests.
+- **Unitree humanoid models** as the embodiment under study, especially G1.
+- **Python control tooling** for launchers, teleoperation, experiments, and analysis.
+- **Reinforcement Learning policies** for balance and locomotion where fixed formulas are too fragile.
+- **Whole-body learned control with NVIDIA GEAR-SONIC** for 29-DOF coordinated motion, including locomotion plus upper-body posture control.
+- **Teleoperation interfaces** to command and observe the robot safely while validating policies.
+- **Scenario-based workshops** to document each research stage as a reproducible case.
+
+The point is not to accumulate tools. The point is to use the minimum stack that can
+answer a hard question with evidence.
+
+The rationale for that stack is straightforward:
+
+- MuJoCo gives fast resets, controlled variation, and reproducible contact experiments.
+- Unitree G1 is a realistic humanoid morphology for studying balance plus manipulation.
+- Python keeps the experiment loop cheap to modify while the control surfaces are still changing.
+- RL is useful where the controller must continuously absorb variation instead of replaying a fixed script.
+- SONIC becomes relevant when leg-only competence is no longer enough and the task requires coordinated upper-body behavior.
+
+## Current research roadmap
+
+The project is currently structured as four main stages:
+
+1. **Heuristic control**: test how far hand-written rules can take walking.
+2. **Reinforcement Learning locomotion**: compare a trained policy against the manual baseline.
+3. **Objects in the scene**: verify whether locomotion survives contact and clutter.
+4. **SONIC whole-body control**: move from leg-only competence to coordinated full-body control with upper-body behaviors such as carrying posture and arm swing.
+
+Those stages do not yet mean the task is solved. They mean the foundation is becoming
+credible enough to attempt simple object-moving behaviors and later more structured
+manual workflows.
+
+## How to read this repository
+
+The README is the project overview. Installation, operation, and stage-by-stage
+execution are intentionally separated.
 
 - [INSTALL.md](INSTALL.md): local installation and baseline validation.
 - [RUNBOOK.md](RUNBOOK.md): day-to-day operation of the simulator, viewer, teleop, and demo.
-- [WALKING.md](WALKING.md): current state of the walking controller and how to test it.
-- [WORKSHOP.md](WORKSHOP.md): step-by-step walkthrough — manual control, RL, objects, and SONIC whole-body control.
-- [workshop/04-control-cuerpo-completo-sonic.md](workshop/04-control-cuerpo-completo-sonic.md): complete installation and operation of 29-DOF G1 locomotion and arm modes.
-- [REINFORCEMENT_LEARNING.md](REINFORCEMENT_LEARNING.md): how the RL policy that keeps the robot standing works internally.
-- [FULL_BODY_INTEGRATION.md](FULL_BODY_INTEGRATION.md): record of the earlier unstable attempt to combine a 12-DOF policy with arm control; Stage 4 documents the working SONIC solution.
+- [WORKSHOP.md](WORKSHOP.md): the staged research path and how each capability is tested.
+- [WALKING.md](WALKING.md): current state of the hand-written walking controller.
+- [REINFORCEMENT_LEARNING.md](REINFORCEMENT_LEARNING.md): what the RL policy is doing and why it helps.
+- [FULL_BODY_INTEGRATION.md](FULL_BODY_INTEGRATION.md): why the earlier partial full-body attempt was unstable.
 
-## What's in this repository
+## Repository scope
 
-Stages 1 through 3 are oriented toward local execution. Stage 4 adds SSH-based remote
-operation of an external NVIDIA GR00T Whole-Body Control installation; it does not
-deploy infrastructure or redistribute its checkpoints. The baseline local flow is:
+Stages 1 through 3 are local to this repository. Stage 4 adds SSH-based interaction
+with an external NVIDIA GR00T Whole-Body Control installation for SONIC experiments.
+This repository documents and orchestrates those experiments; it does not redistribute
+NVIDIA checkpoints or pretend that the entire stack is locally self-contained.
 
-1. Install Python dependencies.
-2. Have `third_party/mujoco_menagerie` available.
-3. Launch the simulator in `viewer` or `headless` mode.
-4. Control it from another terminal over UDP with `teleop_unitree.py`.
+## What success looks like
 
-## Requirements
+The research direction is useful only if it leads to reproducible capability, not just
+interesting demos. In practical terms, success means being able to show, measure, and
+improve a robot that can:
 
-- macOS or Linux with Python 3.
-- A virtualenv in `.venv`.
-- MuJoCo Python `3.2.7`.
-- The `third_party/mujoco_menagerie` folder with the Unitree models.
-- Optional: `ffmpeg` to export video in the grasp demo.
+- remain stable while idle and while moving
+- accept commands safely
+- coordinate locomotion and upper body
+- interact with objects without immediate collapse
+- execute a simple transport task end to end
+- become trainable for additional tasks beyond the first scripted scenario
 
-## Installation
-
-The detailed guide is in [INSTALL.md](INSTALL.md).
-
-Create the environment and install dependencies:
-
-```bash
-cd /path/to/repo/dafo-human
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-```
-
-If the MuJoCo menagerie is missing, clone it inside `third_party` so paths like these exist:
-
-- `third_party/mujoco_menagerie/unitree_h1/scene.xml`
-- `third_party/mujoco_menagerie/unitree_g1/scene.xml`
-- `third_party/mujoco_menagerie/unitree_g1/scene_with_hands.xml`
-
-## Quick start
-
-Headless test to validate that MuJoCo compiles the model:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/python simulate_unitree.py --robot g1-hands --mode headless --steps 300
-```
-
-Open the simulator with the viewer:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer
-```
-
-Models supported by the launcher:
-
-- `h1`
-- `g1`
-- `g1-hands`
-
-## How this "deploys" today
-
-In this repo, deployment means local execution of the simulator. There is no separate build/deploy stage to a server.
-
-The entry point is [simulate_unitree.py](simulate_unitree.py), which:
-
-- Resolves the robot's scene.
-- Compiles the MuJoCo model.
-- Applies the initial keyframe.
-- Opens the viewer or runs a headless test.
-- Can listen for external control over UDP on `127.0.0.1:47001`.
-
-## Controlling the robot
-
-Full operation is documented in [RUNBOOK.md](RUNBOOK.md).
-
-The viewer runs the physics and listens for external commands over UDP. Teleop runs in another terminal:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/python teleop_unitree.py --host 127.0.0.1 --port 47001
-```
-
-There's also a wrapper:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/python teleop_unitree.pyw --host 127.0.0.1 --port 47001
-```
-
-Teleop controls:
-
-- `W/S`: forward and backward
-- `A/D`: turn
-- `Space`: center joystick
-- `R`: reset
-- `P/O`: pause and resume
-- `J/K`: decrease/increase amplitude
-- `N/M`: decrease/increase frequency
-- `Q`: quit
-
-## Available demo
-
-There's a reach-and-grasp demo for the G1 with hands in [reach_grasp_demo.py](reach_grasp_demo.py).
-
-Run without video:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/python reach_grasp_demo.py --no-video
-```
-
-Export video:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/python reach_grasp_demo.py
-```
-
-The video is written by default to `artifacts/g1_reach_grasp.mp4`.
-
-## Main files
-
-- [simulate_unitree.py](simulate_unitree.py): main launcher.
-- [interactive_unitree.py](interactive_unitree.py): viewer loop and interactive controller.
-- [external_control.py](external_control.py): UDP transport.
-- [teleop_unitree.py](teleop_unitree.py): raw-mode keyboard to send commands.
-- [send_unitree_command.py](send_unitree_command.py): one-shot UDP command sending.
-- [reach_grasp_demo.py](reach_grasp_demo.py): reach and grasp demo.
-
-## Common issues
-
-If the viewer doesn't open correctly:
-
-- Use `.venv/bin/mjpython` instead of `.venv/bin/python` for `viewer` mode.
-- Check that port `47001` isn't already in use by another instance.
-
-If a "port in use" error appears:
-
-```bash
-lsof -nP -iUDP:47001
-```
-
-If the scene doesn't exist:
-
-- Check that `third_party/mujoco_menagerie` is present.
-- Or use `--xml /path/to/scene.xml` to pass a custom scene.
-
-## Useful commands
-
-Viewer with UDP control disabled:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --control-port 0
-```
-
-Viewer with automatic close to validate startup:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --max-seconds 10
-```
-
-Headless test with another robot:
-
-```bash
-cd /path/to/repo/dafo-human
-.venv/bin/python simulate_unitree.py --robot h1 --mode headless --steps 300
-```
+That is the reason for the current focus: not because walking is the final product, but
+because walking, whole-body coordination, and object interaction are the minimum base
+for any later manual or assembly-oriented task described by an operational procedure or
+assembly manual.

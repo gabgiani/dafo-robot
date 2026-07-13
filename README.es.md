@@ -2,189 +2,156 @@
 
 *[English version](README.md)*
 
-Este repositorio es donde empezamos a trabajar en Physical AI: enseñarle a un robot humanoide a
-realizar tareas que ya le enseñamos a operadores humanos a través del DAFO Guidance System,
-usando ese conocimiento operativo acumulado como base para la IA embebida (embodied AI).
+Este repositorio documenta el tramo inicial del research para enseñarle a un robot
+humanoide a hacer trabajo físico útil. El hito de mediano plazo es deliberadamente
+simple y concreto: que el robot pueda tomar un objeto de un lugar y moverlo a otro sin
+caerse, sin perder el objeto y sin depender de que un humano escriba a mano cada
+movimiento articular.
 
-Como primer paso, esta es una base mínima para instalar, ejecutar y entender el simulador de
-MuJoCo con robots Unitree sobre el que se apoya el resto de este trabajo.
+Ese objetivo de pick-and-place no es la meta final. Es la primera tarea medible que
+obliga a resolver los problemas reales del trabajo físico: equilibrio, locomoción,
+contacto, coordinación del tren superior, percepción del escenario y selección de
+acciones en el tiempo. Si esa base se vuelve confiable, el mismo enfoque puede empujar
+después otras tareas, incluyendo flujos de manipulación manual y tareas derivadas de
+manuales de ensamblado.
 
-## Mapa de documentación
+## Objetivo del research
+
+El proyecto intenta responder una pregunta práctica: cómo convertimos conocimiento
+operativo que hoy existe en operadores humanos y procedimientos en comportamiento
+robótico que pueda entrenarse, medirse, reproducirse y mejorarse.
+
+La hipótesis de trabajo es que el camino correcto no es arrancar con una promesa
+end-to-end gigante, sino descomponer el problema en capacidades progresivas:
+
+1. mantener al robot estable
+2. hacer que se mueva con intención
+3. lograr que sobreviva al contacto con el mundo
+4. coordinar el cuerpo completo para acciones útiles
+5. conectar esas capacidades con ejecución de tareas simples
+
+Este repositorio es la base de implementación y el cuaderno de research de ese camino.
+
+## Qué tarea estamos persiguiendo
+
+La tarea objetivo concreta es intencionalmente modesta al principio:
+
+- detectar o recibir la ubicación de un objeto
+- acercarse sin caerse
+- alcanzarlo con el tren superior
+- agarrarlo o transportarlo
+- moverlo a una segunda ubicación
+- repetir el proceso bajo variaciones controladas
+
+Si el proyecto no puede hacer eso de forma confiable en simulación, no hay base técnica
+para afirmar que puede manejar trabajo más rico como manipulación repetitiva o manuales
+de ensamblado. La tarea simple, entonces, no es un juguete: es el banco de prueba.
+
+## Por qué dividir el research en etapas
+
+La manipulación humanoide falla por muchas razones distintas, y mezclarlas todas en un
+solo experimento oculta la causa real de los errores. Un programa por etapas vuelve
+observable el modo de falla.
+
+- Un problema de estabilidad todavía no es un problema de grasping.
+- Un problema de caminata todavía no es un problema de percepción.
+- Un problema de coordinación de brazos todavía no es un problema de planificación.
+- Un problema de control de cuerpo completo debería medirse antes de afirmar competencia
+	sobre una tarea.
+
+Por eso el repositorio está organizado como workshops y documentos focalizados en vez de
+una sola demo monolítica. Cada etapa aísla una capacidad, una comparación o un problema
+de integración y deja registro de qué funcionó, qué falló y por qué.
+
+## Por qué no apoyarnos sólo en control determinístico
+
+Los métodos determinísticos siguen siendo parte de la caja de herramientas. Los usamos
+para baselines, instrumentación, envolventes de seguridad, telecomando, pruebas
+repetibles y comportamientos simples guionados. Pero no alcanzan por sí solos para el
+objetivo que nos importa.
+
+En un robot humanoide, el control totalmente diseñado a mano se vuelve frágil rápido
+porque:
+
+- el espacio de estados es de alta dimensión
+- las correcciones de equilibrio deben ser continuas y rápidas
+- el contacto con el mundo es difícil de modelar con reglas fijas
+- las decisiones del tren superior e inferior se acoplan de formas costosas de ajustar a mano
+- el mismo script se rompe cuando cambian la fricción, el timing o la geometría
+
+Dicho de otra forma: un controlador determinístico puede mostrar un movimiento acotado,
+pero eso no equivale a una capacidad robusta. Por eso este repositorio compara control
+explícito escrito a mano contra políticas aprendidas y luego estudia dónde el control
+aprendido de cuerpo completo se vuelve necesario.
+
+## Stack tecnológico
+
+El stack actual de research combina estas piezas:
+
+- **MuJoCo** como simulador físico principal para iteración rápida y pruebas repetibles.
+- **Modelos humanoides Unitree** como embodiment bajo estudio, especialmente G1.
+- **Tooling en Python** para launchers, teleoperación, experimentos y análisis.
+- **Políticas de Reinforcement Learning** para equilibrio y locomoción cuando las fórmulas fijas se vuelven demasiado frágiles.
+- **Control aprendido de cuerpo completo con NVIDIA GEAR-SONIC** para movimiento coordinado de 29 DOF, incluyendo locomoción más postura del tren superior.
+- **Interfaces de telecomando** para mandar órdenes y observar el robot de forma segura mientras se validan policies.
+- **Workshops basados en escenarios** para documentar cada etapa del research como caso reproducible.
+
+La idea no es acumular herramientas. La idea es usar el stack mínimo que permita
+responder una pregunta difícil con evidencia.
+
+La justificación del stack es directa:
+
+- MuJoCo permite resets rápidos, variaciones controladas y experimentos de contacto reproducibles.
+- Unitree G1 ofrece una morfología humanoide realista para estudiar equilibrio más manipulación.
+- Python mantiene barato el loop de experimentación mientras las superficies de control todavía están cambiando.
+- RL sirve donde el controlador debe absorber variación continua en lugar de repetir un script fijo.
+- SONIC pasa a ser relevante cuando la competencia en piernas ya no alcanza y la tarea exige coordinación del tren superior.
+
+## Hoja de ruta actual del research
+
+Hoy el proyecto está estructurado en cuatro etapas principales:
+
+1. **Control heurístico**: medir hasta dónde llega una caminata basada en reglas escritas a mano.
+2. **Locomoción con Reinforcement Learning**: comparar una policy entrenada contra la base manual.
+3. **Objetos en el escenario**: verificar si la locomoción sobrevive a contacto y clutter.
+4. **Control de cuerpo completo con SONIC**: pasar de competencia en piernas a control coordinado de cuerpo completo con comportamientos del tren superior como postura de carga y balanceo de brazos.
+
+Esas etapas no significan que la tarea ya esté resuelta. Significan que la base empieza
+a ser lo bastante creíble como para intentar conductas simples de mover objetos y, más
+adelante, flujos manuales más estructurados.
+
+## Cómo leer este repositorio
+
+El README es la vista general del proyecto. La instalación, la operación y la ejecución
+paso a paso están separadas a propósito.
 
 - [INSTALL.es.md](INSTALL.es.md): instalación local y validación base.
 - [RUNBOOK.es.md](RUNBOOK.es.md): operación diaria del simulador, viewer, teleop y demo.
-- [WALKING.es.md](WALKING.es.md): estado actual del controlador de caminata y cómo probarlo.
-- [WORKSHOP.es.md](WORKSHOP.es.md): recorrido paso a paso — control a mano, RL, objetos y cuerpo completo con SONIC.
-- [workshop/04-control-cuerpo-completo-sonic.es.md](workshop/04-control-cuerpo-completo-sonic.es.md): instalación y operación completa del G1 de 29 DOF con locomoción y modos de brazos.
-- [REINFORCEMENT_LEARNING.es.md](REINFORCEMENT_LEARNING.es.md): cómo funciona por dentro la política de RL que mantiene al robot parado.
-- [FULL_BODY_INTEGRATION.es.md](FULL_BODY_INTEGRATION.es.md): registro del intento anterior no estable al combinar una policy 12-DOF con control de brazos; la Etapa 4 documenta la solución SONIC funcional.
+- [WORKSHOP.es.md](WORKSHOP.es.md): camino de research por etapas y cómo se prueba cada capacidad.
+- [WALKING.es.md](WALKING.es.md): estado actual del controlador de caminata escrito a mano.
+- [REINFORCEMENT_LEARNING.es.md](REINFORCEMENT_LEARNING.es.md): qué hace la policy de RL y por qué ayuda.
+- [FULL_BODY_INTEGRATION.es.md](FULL_BODY_INTEGRATION.es.md): por qué el intento anterior de integración parcial de cuerpo completo fue inestable.
 
-## Qué hay en este repositorio
+## Alcance del repositorio
 
-Las etapas 1 a 3 están orientadas a ejecución local. La Etapa 4 agrega operación remota
-por SSH de una instalación externa de NVIDIA GR00T Whole-Body Control; no despliega
-infraestructura ni redistribuye sus checkpoints. El flujo base local es:
+Las etapas 1 a 3 son locales a este repositorio. La Etapa 4 agrega interacción por SSH
+con una instalación externa de NVIDIA GR00T Whole-Body Control para los experimentos
+SONIC. Este repositorio documenta y orquesta esos experimentos; no redistribuye
+checkpoints de NVIDIA ni pretende que todo el stack sea autocontenido en local.
 
-1. Instalar dependencias Python.
-2. Tener disponible `third_party/mujoco_menagerie`.
-3. Lanzar el simulador en modo `viewer` o `headless`.
-4. Controlarlo desde otra terminal por UDP con `teleop_unitree.py`.
+## Cómo se ve el éxito
 
-## Requisitos
+La dirección de research sólo sirve si conduce a capacidad reproducible, no sólo a demos
+interesantes. En términos prácticos, éxito significa poder mostrar, medir y mejorar un
+robot que pueda:
 
-- macOS o Linux con Python 3.
-- Un virtualenv en `.venv`.
-- MuJoCo Python `3.2.7`.
-- La carpeta `third_party/mujoco_menagerie` con los modelos Unitree.
-- Opcional: `ffmpeg` para exportar video en la demo de grasp.
+- permanecer estable quieto y en movimiento
+- aceptar comandos de forma segura
+- coordinar locomoción y tren superior
+- interactuar con objetos sin colapsar de inmediato
+- ejecutar una tarea simple de transporte de punta a punta
+- volverse entrenable para tareas adicionales más allá del primer escenario guionado
 
-## Instalación
-
-La guía detallada está en [INSTALL.es.md](INSTALL.es.md).
-
-Crear el entorno e instalar dependencias:
-
-```bash
-cd /ruta/al/repo/dafo-human
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-```
-
-Si falta la menagerie de MuJoCo, clónala dentro de `third_party` para que existan rutas como estas:
-
-- `third_party/mujoco_menagerie/unitree_h1/scene.xml`
-- `third_party/mujoco_menagerie/unitree_g1/scene.xml`
-- `third_party/mujoco_menagerie/unitree_g1/scene_with_hands.xml`
-
-## Arranque rápido
-
-Prueba headless para validar que MuJoCo compila el modelo:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/python simulate_unitree.py --robot g1-hands --mode headless --steps 300
-```
-
-Abrir el simulador con viewer:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer
-```
-
-Modelos soportados por el launcher:
-
-- `h1`
-- `g1`
-- `g1-hands`
-
-## Cómo se “despliega” hoy
-
-En este repo, despliegue significa ejecución local del simulador. No existe una etapa separada de build/deploy a servidor.
-
-El punto de entrada es [simulate_unitree.py](simulate_unitree.py), que:
-
-- Resuelve la escena del robot.
-- Compila el modelo MuJoCo.
-- Aplica el keyframe inicial.
-- Abre viewer o corre una prueba headless.
-- Puede escuchar control externo por UDP en `127.0.0.1:47001`.
-
-## Control del robot
-
-La operación completa está documentada en [RUNBOOK.es.md](RUNBOOK.es.md).
-
-El viewer corre la física y escucha comandos externos por UDP. El teleop se ejecuta en otra terminal:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/python teleop_unitree.py --host 127.0.0.1 --port 47001
-```
-
-También existe el wrapper:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/python teleop_unitree.pyw --host 127.0.0.1 --port 47001
-```
-
-Controles del teleop:
-
-- `W/S`: avance y retroceso
-- `A/D`: giro
-- `Espacio`: centrar joystick
-- `R`: reset
-- `P/O`: pausar y reanudar
-- `J/K`: bajar/subir amplitud
-- `N/M`: bajar/subir frecuencia
-- `Q`: salir
-
-## Demo disponible
-
-Hay una demo de reach-and-grasp para G1 con manos en [reach_grasp_demo.py](reach_grasp_demo.py).
-
-Ejecutar sin video:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/python reach_grasp_demo.py --no-video
-```
-
-Exportar video:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/python reach_grasp_demo.py
-```
-
-El video se escribe por defecto en `artifacts/g1_reach_grasp.mp4`.
-
-## Archivos principales
-
-- [simulate_unitree.py](simulate_unitree.py): launcher principal.
-- [interactive_unitree.py](interactive_unitree.py): loop del viewer y controlador interactivo.
-- [external_control.py](external_control.py): transporte UDP.
-- [teleop_unitree.py](teleop_unitree.py): teclado en raw mode para mandar comandos.
-- [send_unitree_command.py](send_unitree_command.py): envío one-shot de comandos UDP.
-- [reach_grasp_demo.py](reach_grasp_demo.py): demo de alcance y agarre.
-
-## Problemas comunes
-
-Si el viewer no abre correctamente:
-
-- Usa `.venv/bin/mjpython` en vez de `.venv/bin/python` para el modo `viewer`.
-- Verifica que el puerto `47001` no esté ocupado por otra instancia.
-
-Si aparece un error de puerto ocupado:
-
-```bash
-lsof -nP -iUDP:47001
-```
-
-Si la escena no existe:
-
-- Revisa que `third_party/mujoco_menagerie` esté presente.
-- O usa `--xml /ruta/a/scene.xml` para pasar una escena personalizada.
-
-## Comandos útiles
-
-Viewer con control UDP desactivado:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --control-port 0
-```
-
-Viewer con cierre automático para validar arranque:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/mjpython simulate_unitree.py --robot g1-hands --mode viewer --max-seconds 10
-```
-
-Prueba headless con otro robot:
-
-```bash
-cd /ruta/al/repo/dafo-human
-.venv/bin/python simulate_unitree.py --robot h1 --mode headless --steps 300
-```
+Ese es el motivo del foco actual: no porque caminar sea el producto final, sino porque
+caminata, coordinación de cuerpo completo e interacción con objetos son la base mínima
+para cualquier tarea posterior de tipo manual o de ensamblado descripta en un procedimiento operativo o en un manual de ensamblado.

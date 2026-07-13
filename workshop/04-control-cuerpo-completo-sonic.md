@@ -23,6 +23,35 @@ displacement**. Walking with the carrying posture and natural arm mode was also
 visually verified. The global pose shown by the viewer comes from `rt/odostate`; it is
 not obtained by integrating the requested velocity.
 
+## Reference screenshots
+
+The following images are included as quick visual references for this workshop. Both
+were captured on the validated remote Linux desktop `192.168.0.60` after bringing up
+`run_sim_loop.py` on `DISPLAY=:0` and selecting the `carry` arm mode without applying
+locomotion input.
+
+![Remote MuJoCo capture of the G1 carry posture](../artifacts/workshop/04_sonic_robot_carry_pose_remote.png)
+
+![SONIC teleop with carry mode selected](../artifacts/workshop/04_sonic_teleop_remote.png)
+
+## Capture notes and issues found
+
+- During the remote capture, `gear_sonic/utils/mujoco_sim/unitree_sdk2py_bridge.py`
+  exposed a startup race: DDS subscribers were initialized before `low_cmd_lock`,
+  `left_hand_cmd_lock`, and `right_hand_cmd_lock`. If `LowCmdHandler` fires early,
+  `run_sim_loop.py` aborts with `AttributeError: 'UnitreeSdk2Bridge' object has no attribute 'low_cmd_lock'`.
+- The practical fix in the GR00T checkout is to create those three locks before any
+  `ChannelSubscriber.Init(...)` call.
+- When `run_sim_loop.py` is started through SSH, `DISPLAY=:0` must be exported
+  explicitly; otherwise GLFW exits with `X11: The DISPLAY environment variable is missing`.
+- Before taking screenshots, confirm that the teleop is not publishing movement
+  commands. A stale active teleop can leave the simulator walking or fallen even when
+  the viewer is already open.
+- In the validated remote environment, CycloneDDS can still emit `ChannelFactory`
+  domain initialization warnings and the MuJoCo robot may fall later in the session.
+  The stable screenshots above were taken immediately after startup, before that
+  later degradation appeared again.
+
 ## What this repository includes
 
 | File | Responsibility |
