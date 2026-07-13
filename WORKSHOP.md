@@ -96,16 +96,15 @@ on that stage's page).
 
 **Stage 4 — whole-body SONIC:**
 ```bash
-# On Linux, after installing GR00T-WholeBodyControl and SONIC checkpoints:
-.venv_sim/bin/python gear_sonic/scripts/run_sim_loop.py --interface sim
-```
-```bash
-# From this repository, local or remote graphical control:
-./run_sonic_teleop.sh --bind tcp://127.0.0.1:5556
+# Run both commands in the same remote Linux desktop session:
+export SONIC_ROOT="$PWD"
+./dafo-human-sonic/sonic_desktop_control.sh sim
+./dafo-human-sonic/sonic_desktop_control.sh control
 ```
 
-Stage 4 has additional prerequisites, four coordinated processes, and an upstream
-patch; follow its complete page before running these commands.
+Wait for `Policy: Listo`, press **Activar**, and do not move until the teleop reports
+`Control conectado`. Stage 4 has additional prerequisites and an upstream patch;
+follow its complete page before running these commands.
 
 ## To keep digging deeper
 

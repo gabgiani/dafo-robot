@@ -1,6 +1,5 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${0:A:h}"
-cd "$ROOT"
-exec .venv/bin/python sonic_teleop.py "$@"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+exec "$SCRIPT_DIR/sonic_desktop_control.sh" control "$@"

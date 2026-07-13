@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import math
+from pathlib import Path
+import subprocess
 import time
 import tkinter as tk
 from tkinter import ttk
@@ -27,14 +29,39 @@ CARRY_POSITION = (
 
 
 class SonicTeleop:
-    def __init__(self, root: tk.Tk, bind: str, initial_speed: float) -> None:
+    def __init__(
+        self,
+        root: tk.Tk,
+        bind: str,
+        initial_speed: float,
+        *,
+        initial_arm_mode: str,
+    ) -> None:
         self.root = root
         self.speed = tk.DoubleVar(value=initial_speed)
-        self.arm_mode = tk.StringVar(value="normal")
+        self.arm_mode = tk.StringVar(value=initial_arm_mode)
         self.status = tk.StringVar(value="Detenido")
+        self.sim_status = tk.StringVar(value="Comprobando")
+        self.policy_status = tk.StringVar(value="No activo")
+        self.command_mode = tk.StringVar(value="INACTIVO")
+        self.command_movement = tk.StringVar(value="0.00, 0.00, 0.00")
+        self.command_facing = tk.StringVar(value="1.00, 0.00, 0.00")
+        self.command_speed = tk.StringVar(value="0.00 m/s")
+        self.arm_position_text = tk.StringVar(value="0.00 " * 17)
+        self.arm_velocity_text = tk.StringVar(value="0.00 " * 17)
+        self.sent_packets = tk.StringVar(value="0")
+        self.sent_packet_count = 0
+        self.policy_running = False
+        self.policy_ready = False
+        self.control_connected = False
+        self.control_marker_count = 0
+        self.activation_marker_count = 0
+        self.sim_ready = False
         self.pressed: set[str] = set()
         self.active = False
+        self.activation_pending = False
         self.activation_frames = 0
+        self.activation_deadline = 0.0
         self.closed = False
         self.arm_position = [0.0] * 17
         self.arm_update_time = time.monotonic()
@@ -51,11 +78,12 @@ class SonicTeleop:
         self.root.bind("<FocusOut>", self._on_focus_out)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.root.after(600, self._publish_loop)
+        self.root.after(200, self._refresh_policy_status)
 
     def _build_ui(self) -> None:
         self.root.title("Telecomando SONIC")
-        self.root.geometry("640x570")
-        self.root.minsize(600, 540)
+        self.root.geometry("680x800")
+        self.root.minsize(640, 760)
 
         outer = ttk.Frame(self.root, padding=20)
         outer.pack(fill="both", expand=True)
@@ -93,6 +121,21 @@ class SonicTeleop:
         )
         ttk.Label(speed_frame, textvariable=self.speed, width=5).pack(side="left", padx=(12, 0))
 
+        telemetry = ttk.LabelFrame(outer, text="Comando publicado", padding=12)
+        telemetry.pack(fill="x", pady=(12, 0))
+        fields = (
+            ("Simulador", self.sim_status),
+            ("Policy", self.policy_status),
+            ("Modo", self.command_mode),
+            ("Movimiento x, y, z", self.command_movement),
+            ("Orientación x, y, z", self.command_facing),
+            ("Velocidad", self.command_speed),
+            ("Paquetes enviados", self.sent_packets),
+        )
+        for row, (label, variable) in enumerate(fields):
+            ttk.Label(telemetry, text=label).grid(row=row, column=0, sticky="w", padx=(0, 16))
+            ttk.Label(telemetry, textvariable=variable).grid(row=row, column=1, sticky="w")
+
         arms = ttk.LabelFrame(outer, text="Posición de brazos", padding=12)
         arms.pack(fill="x", pady=(12, 0))
         for text, value in (
@@ -107,6 +150,13 @@ class SonicTeleop:
                 variable=self.arm_mode,
                 command=self._set_arm_mode,
             ).pack(side="left", expand=True)
+
+        arm_values = ttk.Frame(outer)
+        arm_values.pack(fill="x", pady=(8, 0))
+        ttk.Label(arm_values, text="Objetivos brazo [17]").pack(anchor="w")
+        ttk.Label(arm_values, textvariable=self.arm_position_text, wraplength=620).pack(anchor="w")
+        ttk.Label(arm_values, text="Velocidades brazo [17]").pack(anchor="w", pady=(4, 0))
+        ttk.Label(arm_values, textvariable=self.arm_velocity_text, wraplength=620).pack(anchor="w")
 
         ttk.Label(
             outer,
@@ -126,26 +176,42 @@ class SonicTeleop:
         button.bind("<Leave>", lambda _event: self._release(motion))
 
     def activate(self) -> None:
-        self.active = True
-        self.activation_frames = 10
-        self.status.set("Activo · detenido")
+        if not self.policy_ready:
+            self.status.set("No se puede activar: espera Policy Listo")
+            return
+        if not self.sim_ready:
+            self.status.set("No se puede activar: simulador no disponible")
+            return
+        self.active = False
+        self.activation_pending = True
+        self.activation_marker_count = self.control_marker_count
+        self.activation_frames = 40
+        self.activation_deadline = time.monotonic() + 3.0
+        self.status.set("Activando · esperando confirmación del robot")
 
     def deactivate(self) -> None:
         self.stop()
-        message = command_message(start=False, stop=True)
         for _ in range(5):
-            self.publisher.send(message)
+            self._send(command_message(start=False, stop=True))
         self.active = False
+        self.activation_pending = False
+        self.control_connected = False
         self.activation_frames = 0
+        self._show_command("INACTIVO", (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 0.0)
         self.status.set("Desactivado")
 
     def stop(self) -> None:
         self.pressed.clear()
         for _ in range(5):
-            self.publisher.send(self._idle_message())
+            self._send(self._idle_message())
         self.status.set("Activo · detenido" if self.active else "Detenido")
 
     def _press(self, motion: str) -> None:
+        if not self.policy_running or not self.sim_ready:
+            self.pressed.clear()
+            self.active = False
+            self.status.set("Control bloqueado: revisa Simulador y Policy")
+            return
         if not self.active:
             self.status.set("Activa SONIC antes de moverte")
             return
@@ -154,7 +220,7 @@ class SonicTeleop:
     def _release(self, motion: str) -> None:
         self.pressed.discard(motion)
         if not self.pressed:
-            self.publisher.send(self._idle_message())
+            self._send(self._idle_message())
 
     def _on_key_press(self, event: tk.Event) -> None:
         key = event.keysym.lower()
@@ -210,7 +276,7 @@ class SonicTeleop:
     def _set_arm_mode(self) -> None:
         self.arm_mode_started_at = time.monotonic()
         for _ in range(5):
-            self.publisher.send(self._idle_message())
+            self._send(self._idle_message())
         labels = {"normal": "brazos abajo", "carry": "cargar", "natural": "caminar natural"}
         self.status.set(f"Brazos: {labels[self.arm_mode.get()]}")
 
@@ -234,9 +300,13 @@ class SonicTeleop:
             self.arm_position[index] += delta
             velocity[index] = delta / elapsed
         self.arm_update_time = now
+        self.arm_position_text.set(" ".join(f"{value:+.2f}" for value in self.arm_position))
+        self.arm_velocity_text.set(" ".join(f"{value:+.2f}" for value in velocity))
         return tuple(self.arm_position), tuple(velocity)
 
-    def _motion_message(self) -> tuple[bytes, str]:
+    def _motion_message(
+        self,
+    ) -> tuple[bytes, str, tuple[float, float, float], tuple[float, float, float]]:
         forward = float("forward" in self.pressed) - float("backward" in self.pressed)
         lateral = float("left" in self.pressed) - float("right" in self.pressed)
         turn = float("turn-left" in self.pressed) - float("turn-right" in self.pressed)
@@ -252,20 +322,100 @@ class SonicTeleop:
             self.speed.get(),
             upper_body_position,
             upper_body_velocity,
-        ), " + ".join(labels)
+        ), " + ".join(labels), movement, facing
+
+    def _send(self, message: bytes) -> None:
+        self.publisher.send(message)
+        self.sent_packet_count += 1
+        self.sent_packets.set(str(self.sent_packet_count))
+
+    def _show_command(
+        self,
+        mode: str,
+        movement: tuple[float, float, float],
+        facing: tuple[float, float, float],
+        speed: float,
+    ) -> None:
+        self.command_mode.set(mode)
+        self.command_movement.set(", ".join(f"{value:.2f}" for value in movement))
+        self.command_facing.set(", ".join(f"{value:.2f}" for value in facing))
+        self.command_speed.set(f"{speed:.2f} m/s")
+
+    def _refresh_policy_status(self) -> None:
+        if self.closed:
+            return
+        result = subprocess.run(
+            ["pgrep", "-f", "[g]1_deploy_onnx_ref"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        self.policy_running = result.returncode == 0
+        policy_log = Path("/tmp/sonic_desktop_policy.log")
+        policy_text = policy_log.read_text(errors="ignore") if policy_log.exists() else ""
+        self.policy_ready = self.policy_running and "Init Done" in policy_text
+        sim_log = Path("/tmp/sonic_desktop_sim.log")
+        sim_text = sim_log.read_text(errors="ignore") if sim_log.exists() else ""
+        self.control_marker_count = sim_text.count("SONIC_CONTROL_STARTED")
+        if self.activation_pending:
+            self.control_connected = (
+                self.policy_ready and self.control_marker_count > self.activation_marker_count
+            )
+        if self.control_connected:
+            self.policy_status.set("Control conectado")
+        elif self.policy_ready:
+            self.policy_status.set("Listo · pulsa Activar")
+        elif self.policy_running:
+            self.policy_status.set("Cargando modelos")
+        else:
+            self.policy_status.set("No activo")
+        if "Robot has fallen" in sim_text:
+            self.sim_ready = False
+            self.sim_status.set("Caído · reinicia con los iconos 3 y 1")
+        else:
+            sim_result = subprocess.run(
+                ["pgrep", "-f", "[r]un_sim_loop.py --interface sim"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            self.sim_ready = sim_result.returncode == 0 and "SONIC_SIM_READY" in sim_text
+            self.sim_status.set("Activo" if self.sim_ready else "No activo")
+        if self.activation_pending and self.control_connected:
+            self.activation_pending = False
+            self.activation_frames = 0
+            self.active = True
+            self.status.set("Activo · detenido · robot conectado")
+        elif self.activation_pending and time.monotonic() >= self.activation_deadline:
+            self.activation_pending = False
+            self.activation_frames = 0
+            self.status.set("Activación sin respuesta del robot")
+        if (self.active or self.activation_pending) and (not self.policy_running or not self.sim_ready):
+            self.pressed.clear()
+            self.active = False
+            self.activation_pending = False
+            self.status.set("Control bloqueado: revisa Simulador y Policy")
+        self.root.after(1000, self._refresh_policy_status)
 
     def _publish_loop(self) -> None:
         if self.closed:
             return
-        if self.activation_frames:
-            self.publisher.send(command_message(start=True, stop=False))
-            self.activation_frames -= 1
-        if self.active and self.pressed:
-            message, description = self._motion_message()
-            self.publisher.send(message)
+        if self.activation_pending:
+            if self.activation_frames:
+                self._send(command_message(start=True, stop=False))
+                self.activation_frames -= 1
+            self._send(self._idle_message())
+            self._show_command("ACTIVANDO", (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 0.0)
+        elif self.active and self.pressed:
+            message, description, movement, facing = self._motion_message()
+            self._send(message)
+            self._show_command("SLOW_WALK", movement, facing, self.speed.get())
             self.status.set(f"Activo · {description} · {self.speed.get():.2f} m/s")
         elif self.active:
-            self.publisher.send(self._idle_message())
+            self._send(self._idle_message())
+            self._show_command("IDLE", (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 0.0)
+        else:
+            self._show_command("INACTIVO", (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 0.0)
         self.root.after(PUBLISH_INTERVAL_MS, self._publish_loop)
 
     def close(self) -> None:
@@ -282,6 +432,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Telecomando grafico para SONIC")
     parser.add_argument("--bind", default="tcp://127.0.0.1:5556")
     parser.add_argument("--speed", type=float, default=0.3)
+    parser.add_argument("--initial-arm-mode", choices=("normal", "carry", "natural"), default="normal")
     args = parser.parse_args()
     if not 0.1 <= args.speed <= 0.8:
         parser.error("--speed debe estar entre 0.1 y 0.8 m/s")
@@ -291,7 +442,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     root = tk.Tk()
-    SonicTeleop(root, args.bind, args.speed)
+    SonicTeleop(
+        root,
+        args.bind,
+        args.speed,
+        initial_arm_mode=args.initial_arm_mode,
+    )
     root.mainloop()
 
 

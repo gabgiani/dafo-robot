@@ -98,16 +98,15 @@ en la página de su etapa).
 
 **Etapa 4 — SONIC de cuerpo completo:**
 ```bash
-# En Linux, después de instalar GR00T-WholeBodyControl y los checkpoints SONIC:
-.venv_sim/bin/python gear_sonic/scripts/run_sim_loop.py --interface sim
-```
-```bash
-# Desde este repo, telecomando local o remoto:
-./run_sonic_teleop.sh --bind tcp://127.0.0.1:5556
+# Ejecutar ambos comandos en la misma sesión del desktop Linux remoto:
+export SONIC_ROOT="$PWD"
+./dafo-human-sonic/sonic_desktop_control.sh sim
+./dafo-human-sonic/sonic_desktop_control.sh control
 ```
 
-La Etapa 4 tiene prerrequisitos adicionales, cuatro procesos coordinados y un patch
-upstream; seguir su página completa antes de ejecutar estos comandos.
+Esperar `Policy: Listo`, pulsar **Activar** y no mover hasta que el teleop indique
+`Control conectado`. La Etapa 4 tiene prerrequisitos adicionales y un patch upstream;
+seguir su página completa antes de ejecutar estos comandos.
 
 ## Para seguir profundizando
 

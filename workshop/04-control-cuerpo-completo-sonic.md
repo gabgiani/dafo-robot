@@ -26,7 +26,7 @@ not obtained by integrating the requested velocity.
 ## Reference screenshots
 
 The following images are included as quick visual references for this workshop. Both
-were captured on the validated remote Linux desktop `192.168.0.60` after bringing up
+were captured on the validated remote Linux desktop after bringing up
 `run_sim_loop.py` on `DISPLAY=:0` and selecting the `carry` arm mode without applying
 locomotion input.
 
@@ -63,11 +63,10 @@ locomotion input.
 | `sonic_viewer.py` | Viewer for measured 29-DOF, hands, and global-base state. |
 | `run_sonic_control.sh` | CLI client launcher. |
 | `run_sonic_teleop.sh` | Local remote-control launcher. |
-| `run_sonic_remote.sh` | SONIC executable launcher over SSH. |
-| `run_sonic_viewer.sh` | SSH tunnels, relay, and macOS viewer. |
+| `sonic_desktop_control.sh` | Safe simulator, policy, teleop, and stop orchestration on Linux. |
 | `run_sonic_linux_gui.sh` | Viewer when the entire stack runs on Linux. |
 | `requirements-sonic.txt` | Local ZMQ/MessagePack dependencies. |
-| `04-sonic-mujoco-physical-motion.patch` | Disables upstream's elastic band. |
+| `04-sonic-mujoco-physical-motion.patch` | Upstream simulator safety, readiness, pose, and DDS fixes. |
 
 The ONNX checkpoints, C++ binary, Unitree SDK2, and NVIDIA repository are not
 redistributed here. Install them from their official sources.
@@ -97,11 +96,12 @@ All three ports use TCP/ZMQ. DDS runs inside the Linux host over `lo`.
 - `git`, a C++ compiler, and the dependencies required by upstream.
 - [NVlabs/GR00T-WholeBodyControl](https://github.com/NVlabs/GR00T-WholeBodyControl).
 - [nvidia/GEAR-SONIC](https://huggingface.co/nvidia/GEAR-SONIC) checkpoints.
-- This repository cloned on the operating machine.
-- For remote operation: SSH private/PEM-key access and macOS with MuJoCo.
+- This repository cloned inside the GR00T root on the Linux operating machine.
+- Remote-desktop access to that Linux graphical session. The validated Stage 4 stack
+  does not split control or visualization across macOS and Linux.
 
 The validated run used upstream `021df73`, Python `3.10.20`, MuJoCo `3.10.0`, PyZMQ
-`27.1.0`, and msgpack `1.2.1` on Linux. A different revision may change protocol or
+`27.1.0`, and msgpack `1.1.2` on Linux. A different revision may change protocol or
 paths; this module expects **ZMQ v4 with a 1280-byte header**.
 
 ## Linux installation
@@ -162,20 +162,21 @@ cp -R dafo-human-sonic/third_party/unitree_rl_gym/resources/robots/g1_descriptio
 The viewer needs `dafo-human-sonic/model/g1_29dof_with_hand_rev_1_0.xml` and all assets
 referenced by that XML, which is why the entire directory is copied.
 
-### 5. Release the physical base
+### 5. Apply the validated simulator changes
 
-The official configuration enables a virtual elastic band that supports the torso.
-That helps some tests but prevents free physical locomotion measurements. Apply this
-module's patch from the upstream root:
+The patch disables the virtual elastic band, applies the validated default pose,
+corrects fixed-base observations, fixes DDS lock initialization, holds the robot before
+the first policy command, emits readiness/control markers, and stops rather than
+automatically resetting after a fall. Apply it from the upstream root:
 
 ```bash
-git apply --unidiff-zero --check dafo-human-sonic/workshop/04-sonic-mujoco-physical-motion.patch
-git apply --unidiff-zero dafo-human-sonic/workshop/04-sonic-mujoco-physical-motion.patch
+git apply --check dafo-human-sonic/workshop/04-sonic-mujoco-physical-motion.patch
+git apply dafo-human-sonic/workshop/04-sonic-mujoco-physical-motion.patch
 ```
 
 If `--check` fails, **do not force the patch**. Check the upstream revision and adapt
-the two changes deliberately. Initializing `elastic_band` prevents an `AttributeError`
-when the band is disabled.
+the changes deliberately. Do not apply only the elastic-band hunk: the launcher and
+teleop depend on the readiness markers and control gate in this patch.
 
 ### 6. Create the required motion directory
 
@@ -185,93 +186,51 @@ The binary requires this argument even when the planner is the active controller
 mkdir -p /tmp/sonic_smoke_motion
 ```
 
-## Full startup on a Linux desktop
+## Validated startup on the remote Linux desktop
 
-Open four terminals in `/home/USER/GR00T-WholeBodyControl`.
-
-**Terminal 1, MuJoCo physics:**
-
-```bash
-.venv_sim/bin/python gear_sonic/scripts/run_sim_loop.py \
-  --interface sim --enable-onscreen --no-enable-offscreen
-```
-
-**Terminal 2, SONIC policy:**
+Run every Stage 4 process in the same graphical Linux session. From the
+`GR00T-WholeBodyControl` root:
 
 ```bash
-cd gear_sonic_deploy
-target/release/g1_deploy_onnx_ref \
-  lo policy/low_latency/model_decoder.onnx /tmp/sonic_smoke_motion \
-  --planner-file planner/target_vel/V2/planner_sonic.onnx \
-  --planner-precision 16 \
-  --obs-config policy/low_latency/observation_config.yaml \
-  --encoder-file policy/low_latency/model_encoder.onnx \
-  --input-type zmq_manager --zmq-host 127.0.0.1 --zmq-port 5556 \
-  --output-type all --disable-crc-check
+export SONIC_ROOT="$PWD"
+./dafo-human-sonic/sonic_desktop_control.sh sim
+./dafo-human-sonic/sonic_desktop_control.sh control
 ```
 
-**Terminal 3, odometry and viewer:**
+The first command starts MuJoCo in a gated default pose and waits for
+`SONIC_SIM_READY`. The second starts the policy, writes its output to
+`/tmp/sonic_desktop_policy.log`, and opens the teleop. It is safe for the teleop to
+open while the policy loads because activation remains blocked until the policy log
+contains `Init Done`.
+
+Wait until the teleop displays **Simulador: Activo** and **Policy: Listo · pulsa
+Activar**. Then press **Activar** manually. Do not move until the policy field changes
+to **Control conectado**, which is based on a new `SONIC_CONTROL_STARTED` marker from
+the simulator rather than on the number of packets sent locally.
+
+The launcher derives paths from the repository layout. Override `SONIC_ROOT`,
+`SONIC_GUI_ROOT`, `SONIC_PYTHON`, `DISPLAY`, or `XAUTHORITY` only when the Linux
+installation differs. No SSH host, username, key, or laboratory path is hardcoded.
+
+For the optional measured 29-DOF viewer, use two more terminals on that same Linux
+desktop:
 
 ```bash
-.venv_sim/bin/python dafo-human-sonic/sonic_physical_pose_relay.py &
-SONIC_ROOT="$PWD" dafo-human-sonic/run_sonic_linux_gui.sh
+.venv_sim/bin/python dafo-human-sonic/sonic_physical_pose_relay.py
 ```
-
-**Terminal 4, remote control:**
 
 ```bash
-cd dafo-human-sonic
-../.venv_sim/bin/python sonic_teleop.py --bind tcp://127.0.0.1:5556
+SONIC_ROOT="$PWD" ./dafo-human-sonic/run_sonic_linux_gui.sh
 ```
 
-Order matters: simulator, policy, relay/viewer, and remote control last.
-
-## Validated remote workflow
-
-The launchers contain defaults for the validated lab, but every connection value can
-be overridden; do not edit scripts or hardcode a different machine.
-
-On macOS:
-
-```bash
-cd /path/to/DAFO-ROBOT-Research
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt -r requirements-sonic.txt
-```
-
-First start `run_sim_loop.py` on the Linux desktop as shown for Terminal 1. Then start
-the remote policy from macOS:
-
-```bash
-export SONIC_SSH_KEY="$HOME/.ssh/my-key.pem"
-export SONIC_SSH_HOST="user@linux-host"
-export SONIC_REMOTE_ROOT="/path/to/GR00T-WholeBodyControl/gear_sonic_deploy"
-./run_sonic_remote.sh
-```
-
-Open the viewer and tunnels in another terminal:
-
-```bash
-export SONIC_SSH_KEY="$HOME/.ssh/my-key.pem"
-export SONIC_SSH_HOST="user@linux-host"
-export SONIC_REMOTE_ROOT="/path/to/GR00T-WholeBodyControl"
-./run_sonic_viewer.sh
-```
-
-Open the remote control in a third terminal:
-
-```bash
-./run_sonic_teleop.sh --bind tcp://127.0.0.1:5556
-```
-
-`run_sonic_viewer.sh` creates forward tunnels for telemetry and odometry and a reverse
-forward for control. The private key is always passed with `-i`; SSH passwords are not
-used. The policy starts before the viewer so `5557` is publishing before the viewer's
-connection timeout; ZMQ retries the `5556` connection until the tunnel appears.
+Do not use a macOS teleop, reverse SSH tunnel, or local macOS viewer for this flow.
+Those arrangements do not share the Linux readiness logs used by the safe activation
+handshake and are not the configuration validated by this workshop.
 
 ## Using the remote control
 
-1. Press **Activar** and wait for active status.
+1. Wait for **Policy: Listo · pulsa Activar**, press **Activar**, and wait for
+  **Control conectado**.
 2. Hold a button or key only while movement is desired. Releasing it removes the motion
    command: this is the dead-man behavior.
 3. Press **Detener** or `Space` before changing modes or windows.
@@ -330,11 +289,12 @@ use `sonic_viewer.py` and verify that the global position changes. For a safe te
 1. Release every key/button.
 2. Press **Detener**.
 3. Press **Desactivar**.
-4. Stop the SONIC binary with `Ctrl+C`.
-5. Stop the relay and simulator with `Ctrl+C`.
+4. Stop the optional relay/viewer with `Ctrl+C`.
+5. Stop the stack from the GR00T root:
 
-Do not run a broad `pkill -f` inside the same SSH command: the pattern may match its
-own shell. Find the PID and stop that process explicitly.
+```bash
+SONIC_ROOT="$PWD" ./dafo-human-sonic/sonic_desktop_control.sh stop
+```
 
 ## Problems encountered and solutions
 
@@ -371,15 +331,15 @@ idle frames.
 
 ### The policy receives no commands
 
-Check that the remote is bound to `5556`, SONIC uses `--input-type zmq_manager`, topic
-`pose`, and protocol v4. For remote operation, check the reverse forward. Port `5557`
-must belong to SONIC and `5558` to the relay.
+Check that the teleop is bound to `5556`, SONIC uses `--input-type zmq_manager`, and
+protocol v4 is in use. Command packets use topic `command`; planner and arm packets use
+topic `planner`. Also check `/tmp/sonic_desktop_policy.log` for `Init Done`. Port
+`5557` belongs to SONIC and `5558` to the optional relay.
 
 ### `Address already in use`
 
-A previous instance is running. Find its PID with `ss -ltnp` on Linux or
-`lsof -nP -iTCP:PORT` on macOS, stop only that process, and restart in the documented
-order.
+A previous instance is running. Use `sonic_desktop_control.sh stop`, verify the owning
+PID with `ss -ltnp` on Linux if needed, and restart in the documented order.
 
 ### The viewer cannot load the XML or reports STL errors
 
@@ -388,9 +348,9 @@ an isolated STL decoder as the final test: MuJoCo must load the complete scene.
 
 ### The upstream patch does not apply
 
-It was tested against `021df73`. Review the installed version's diff and reproduce only
-the `elastic_band` initialization and `ENABLE_ELASTIC_BAND: False`. Do not use
-`--reject` or ignore conflicts.
+It was tested against `021df73`. Review the installed version and port the complete
+safety/readiness patch deliberately. Do not use `--reject`, ignore conflicts, or apply
+only the elastic-band changes.
 
 ## Lessons learned
 
